@@ -1,0 +1,27 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+    - devstack_path: "{{ ansible_env['HOME'] }}/devstack"
+  tasks:
+    - name: download devstack
+      git:
+        repo: git://git.openstack.org/openstack-dev/devstack
+        dest: "{{ devstack_path }}"
+    - name: copy local.conf
+      copy:
+        src: "{{ devstack_path }}/samples/local.conf"
+        dest: "{{ devstack_path }}/local.conf"
+    - name: configure enabled services
+      lineinfile:
+        create: no
+        dest: "{{ devstack_path }}/local.conf"
+        line: "ENABLED_SERVICES=mysql,rabbit,key,horizon,n-api"
+    - name: check devstack
+      shell: "screen -ls | grep 'There is a screen on'"
+      register: screen_exists
+      ignore_errors: True
+      changed_when: False
+    - name: run devstack
+      command: "{{ ansible_env['HOME'] }}/devstack/stack.sh"
+      when: screen_exists|failed
