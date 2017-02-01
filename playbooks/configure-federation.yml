@@ -33,9 +33,30 @@
     - name: configure keystone vhost
       become: yes
       remote_user: root
-      template:
-        src: ../templates/apache2-keystone.conf.j2
-        dest: /etc/apache2/sites-available/keystone.conf
+      blockinfile:
+        path: /etc/apache2/sites-available/keystone.conf
+        block: |
+          <Location ~ "/identity/v3/auth/OS-FEDERATION/websso/mapped">
+              AuthType shibboleth
+              Require valid-user
+              ShibRequestSetting requireSession 1
+              ShibRequireSession On
+              ShibExportAssertion Off
+          </Location>
+          <Location /Shibboleth.sso>
+              SetHandler shib
+          </Location>
+          <Location /identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth>
+              ShibRequestSetting requireSession 1
+              AuthType shibboleth
+              ShibExportAssertion Off
+              Require valid-user
+          </Location>
+          <Location ~ "/identity/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/mapped/websso">
+              AuthType shibboleth
+              Require valid-user
+          </Location>
+          WSGIScriptAliasMatch ^(/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /usr/local/bin/keystone-wsgi-public/
       notify:
         - restart apache
     - name: set keystone remote_id_attribute
