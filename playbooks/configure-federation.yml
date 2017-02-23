@@ -67,7 +67,7 @@
       os_user_role:
         group: 'federated_users'
         domain: "{{ domain.id }}"
-        role: 'Member'
+        role: 'admin'
     - name: check existence of identity provider
       shell: openstack identity provider show myidp
       ignore_errors: True
