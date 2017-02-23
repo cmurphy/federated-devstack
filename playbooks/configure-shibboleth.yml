@@ -1,0 +1,65 @@
+---
+# Configure Shibboleth
+- name: install shibboleth
+  become: yes
+  remote_user: root
+  apt: name=libapache2-mod-shib2
+- name: check shib key
+  stat:
+    path: /etc/shibboleth/sp-key.pem
+  register: sp_key
+- name: generate shib key
+  become: yes
+  remote_user: root
+  shell: shib-keygen
+  when: sp_key.stat.exists == False
+- name: configure shibboleth
+  become: yes
+  remote_user: root
+  vars:
+    local_entity_id: "https://mysp.example.com/shibboleth/{{ uuid }}"
+  template:
+    src: ../templates/shibboleth2.xml.j2
+    dest: /etc/shibboleth/shibboleth2.xml
+  notify:
+    - restart shibd
+    - restart apache
+# Configure Keystone
+- name: configure keystone vhost
+  become: yes
+  remote_user: root
+  blockinfile:
+    path: /etc/apache2/sites-available/keystone.conf
+    block: |
+      <Location ~ "/identity/v3/auth/OS-FEDERATION/websso/mapped">
+          AuthType shibboleth
+          Require valid-user
+          ShibRequestSetting requireSession 1
+          ShibRequireSession On
+          ShibExportAssertion Off
+      </Location>
+      <Location /Shibboleth.sso>
+          SetHandler shib
+      </Location>
+      <Location /identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth>
+          ShibRequestSetting requireSession 1
+          AuthType shibboleth
+          ShibExportAssertion Off
+          Require valid-user
+      </Location>
+      <Location ~ "/identity/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/mapped/websso">
+          AuthType shibboleth
+          Require valid-user
+      </Location>
+      WSGIScriptAliasMatch ^(/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /usr/local/bin/keystone-wsgi-public/
+  notify:
+    - restart apache
+- name: set keystone remote_id_attribute
+  ini_file:
+    create: no
+    dest: /etc/keystone/keystone.conf
+    section: federation
+    option: remote_id_attribute
+    value: Shib-Identity-Provider
+  notify:
+    - restart apache

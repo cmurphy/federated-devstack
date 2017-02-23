@@ -3,71 +3,14 @@
   connection: local
   vars:
     - uuid: "{{ ansible_default_ipv4['macaddress'] | to_uuid }}"
+    - implementation: '{{ implementation }}'
+    - local_entity_id: "https://mysp.example.com/{{ implementation }}/{{ uuid }}"
+    - metadata_file_basename: "{{ local_entity_id|replace(':','_')|replace('/','_')|replace('-','_')|replace('___','_') }}"
   tasks:
-    # Configure Shibboleth
-    - name: install shibboleth
-      become: yes
-      remote_user: root
-      apt: name=libapache2-mod-shib2
-    - name: check shib key
-      stat:
-        path: /etc/shibboleth/sp-key.pem
-      register: sp_key
-    - name: generate shib key
-      become: yes
-      remote_user: root
-      shell: shib-keygen
-      when: sp_key.stat.exists == False
-    - name: configure shibboleth
-      become: yes
-      remote_user: root
-      vars:
-        local_entity_id: "https://mysp.example.com/shibboleth/{{ uuid }}"
-      template:
-        src: ../templates/shibboleth2.xml.j2
-        dest: /etc/shibboleth/shibboleth2.xml
-      notify:
-        - restart shibd
-        - restart apache
-    # Configure Keystone
-    - name: configure keystone vhost
-      become: yes
-      remote_user: root
-      blockinfile:
-        path: /etc/apache2/sites-available/keystone.conf
-        block: |
-          <Location ~ "/identity/v3/auth/OS-FEDERATION/websso/mapped">
-              AuthType shibboleth
-              Require valid-user
-              ShibRequestSetting requireSession 1
-              ShibRequireSession On
-              ShibExportAssertion Off
-          </Location>
-          <Location /Shibboleth.sso>
-              SetHandler shib
-          </Location>
-          <Location /identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth>
-              ShibRequestSetting requireSession 1
-              AuthType shibboleth
-              ShibExportAssertion Off
-              Require valid-user
-          </Location>
-          <Location ~ "/identity/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/mapped/websso">
-              AuthType shibboleth
-              Require valid-user
-          </Location>
-          WSGIScriptAliasMatch ^(/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /usr/local/bin/keystone-wsgi-public/
-      notify:
-        - restart apache
-    - name: set keystone remote_id_attribute
-      ini_file:
-        create: no
-        dest: /etc/keystone/keystone.conf
-        section: federation
-        option: remote_id_attribute
-        value: Shib-Identity-Provider
-      notify:
-        - restart apache
+    - include: configure-shibboleth.yml
+      when: implementation == "shibboleth"
+    - include: configure-mellon.yml
+      when: implementation == "mellon"
     - name: set keystone trusted_dashboard
       ini_file:
         create: no
@@ -99,7 +42,7 @@
         line: 'WEBSSO_ENABLED = True'
       notify:
         - restart apache
-    - name: set horizon WEBSSO_ENABLED
+    - name: set horizon WEBSSO_CHOICES
       lineinfile:
         create: no
         dest: /opt/stack/horizon/openstack_dashboard/local/local_settings.py
@@ -118,20 +61,13 @@
     - name: create federated domain
       os_keystone_domain: name=federated_domain
       register: domain
-    - name: create federated project
-      os_project: name=federated_project domain_id="{{ domain.id }}"
     - name: create federated group
       os_group: name=federated_users domain_id="{{ domain.id }}"
     - name: add federated users to federated domain
       os_user_role:
         group: 'federated_users'
         domain: "{{ domain.id }}"
-        role: 'Member'
-    - name: add federated users to federated project
-      os_user_role:
-        group: federated_users
-        project: federated_project
-        role: Member
+        role: 'admin'
     - name: check existence of identity provider
       shell: openstack identity provider show myidp
       ignore_errors: True
@@ -165,17 +101,24 @@
       shell: openstack federation protocol create mapped --mapping myidp_mapping --identity-provider myidp
       when: check_protocol|failed
     # Register on testshib
-    - name: download metadata
+    - name: download shibboleth metadata
       get_url:
         url: "http://{{ ansible_default_ipv4['address'] }}/Shibboleth.sso/Metadata"
         dest: "{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml"
-      register: metadata
+      register: metadata_shibboleth
+      when: implementation == "shibboleth"
+    - name: copy mellon metadata
+      copy:
+        src: "/etc/apache2/mellon/{{ metadata_file_basename }}.xml"
+        dest: "{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml"
+      register: metadata_mellon
+      when: implementation == "mellon"
     - name: register on testshib
       # The URI module doesn't have an equivalent of -F to post files
       shell: "curl -X POST -F \"userfile=@{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml\" https://www.testshib.org/procupload.php"
       args:
         warn: no
-      when: metadata['changed']
+      when: metadata_shibboleth['changed'] or metadata_mellon['changed']
   handlers:
     - name: restart shibd
       become: yes
