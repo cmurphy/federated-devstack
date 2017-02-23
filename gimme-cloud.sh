@@ -19,8 +19,6 @@ fi
 sudo pip install $HOME/ansible
 
 ansible-playbook -vvvv -i "localhost," -c local playbooks/install-devstack.yml
-# TODO: remove when requirements/upper-constraints.txt is updated
-sudo pip install -U --no-deps python-openstackclient
 source $HOME/devstack/accrc/admin/admin
 export OS_IDENTITY_API_VERSION=3
 ansible-playbook -vvvv -i "localhost," -c local \
