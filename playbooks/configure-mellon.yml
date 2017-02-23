@@ -1,0 +1,88 @@
+---
+# Configure Mellon
+- name: install mellon
+  become: yes
+  remote_user: root
+  apt: name=libapache2-mod-auth-mellon
+- name: get mellon config script
+  get_url:
+    url: "https://raw.githubusercontent.com/UNINETT/mod_auth_mellon/master/mellon_create_metadata.sh"
+    dest: "{{ ansible_env['HOME'] }}/mellon_create_metadata.sh"
+    mode: 0755
+- name: create mellon metadata directory
+  become: yes
+  remote_user: root
+  file:
+    path: /etc/apache2/mellon
+    state: directory
+- name: generate mellon metadata
+  shell: "{{ ansible_env['HOME'] }}/mellon_create_metadata.sh {{ local_entity_id }} http://{{ ansible_default_ipv4['address'] }}/identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth/mellon"
+  args:
+    chdir: "{{ ansible_env['HOME'] }}"
+    creates: "{{ ansible_env['HOME'] }}/{{ metadata_file_basename }}.xml"
+- name: fix SP metadata
+  lineinfile:
+    create: no
+    dest: "{{ ansible_env['HOME'] }}/{{ metadata_file_basename }}.xml"
+    backrefs: yes
+    regexp: '(^\s*<KeyDescriptor use=\")(.*)(\">$)'
+    line: '\1encryption\3'
+- name: install mellon metadata
+  become: yes
+  remote_user: root
+  with_items:
+    - 'cert'
+    - 'key'
+    - 'xml'
+  copy:
+    src: "{{ ansible_env['HOME'] }}/{{ metadata_file_basename }}.{{ item }}"
+    dest: "/etc/apache2/mellon/{{ metadata_file_basename }}.{{ item }}"
+- name: Get testshib IdP metadata
+  become: yes
+  remote_user: root
+  get_url:
+    url: http://www.testshib.org/metadata/testshib-providers.xml
+    dest: /etc/apache2/mellon/idp-metadata.xml
+# Configure Keystone
+- name: configure keystone vhost
+  become: yes
+  remote_user: root
+  blockinfile:
+    path: /etc/apache2/sites-available/keystone.conf
+    block: |
+      <Location /identity/v3>
+          MellonEnable "info"
+          MellonSPPrivateKeyFile /etc/apache2/mellon/{{ metadata_file_basename }}.key
+          MellonSPCertFile /etc/apache2/mellon/{{ metadata_file_basename }}.cert
+          MellonSPMetadataFile /etc/apache2/mellon/{{ metadata_file_basename }}.xml
+          MellonIdPMetadataFile /etc/apache2/mellon/idp-metadata.xml
+          MellonEndpointPath /identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth/mellon
+          MellonSubjectConfirmationDataAddressCheck Off
+          MellonIdP "IDP"
+      </Location>
+      <Location /identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth>
+          AuthType "Mellon"
+          MellonEnable "auth"
+      </Location>
+      <Location ~ "/identity/v3/auth/OS-FEDERATION/websso/mapped">
+        AuthType Mellon
+        MellonEnable auth
+        Require valid-user
+      </Location>
+      <Location ~ "/identity/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/mapped/websso">
+        AuthType Mellon
+        MellonEnable auth
+        Require valid-user
+      </Location>
+      WSGIScriptAliasMatch ^(/identity/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /usr/local/bin/keystone-wsgi-public/
+  notify:
+    - restart apache
+- name: set keystone remote_id_attribute
+  ini_file:
+    create: no
+    dest: /etc/keystone/keystone.conf
+    section: federation
+    option: remote_id_attribute
+    value: MELLON_IDP
+  notify:
+    - restart apache

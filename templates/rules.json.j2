@@ -15,7 +15,11 @@
         ],
         "remote": [
             {
+                {% if implementation == 'shibboleth' %}
                 "type": "REMOTE_USER"
+                {% else %}
+                "type": "MELLON_urn:oid:1.3.6.1.4.1.5923.1.1.1.6"
+                {% endif %}
             }
         ]
     }
