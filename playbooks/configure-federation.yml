@@ -105,19 +105,20 @@
       get_url:
         url: "http://{{ ansible_default_ipv4['address'] }}/Shibboleth.sso/Metadata"
         dest: "{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml"
-      register: metadata
+      register: metadata_shibboleth
       when: implementation == "shibboleth"
     - name: copy mellon metadata
       copy:
         src: "/etc/apache2/mellon/{{ metadata_file_basename }}.xml"
         dest: "{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml"
-      register: metadata
+      register: metadata_mellon
+      when: implementation == "mellon"
     - name: register on testshib
       # The URI module doesn't have an equivalent of -F to post files
       shell: "curl -X POST -F \"userfile=@{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml\" https://www.testshib.org/procupload.php"
       args:
         warn: no
-      when: metadata['changed']
+      when: metadata_shibboleth['changed'] or metadata_mellon['changed']
   handlers:
     - name: restart shibd
       become: yes
