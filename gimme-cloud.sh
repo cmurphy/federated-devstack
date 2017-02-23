@@ -8,13 +8,13 @@ if [ "$implementation" != "shibboleth" -a "$implementation" != "mellon" ] ; then
   exit 1
 fi
 
-# TODO: remove after https://github.com/ansible/ansible/pull/20609 is addressed and released
+# TODO: remove when 2.3 is released
 if [ -d $HOME/ansible ] ; then
   pushd $HOME/ansible
   git pull
   popd
 else
-  git clone https://github.com/cmurphy/ansible $HOME/ansible
+  git clone https://github.com/ansible/ansible $HOME/ansible
 fi
 sudo pip install $HOME/ansible
 
