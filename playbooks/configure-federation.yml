@@ -42,7 +42,7 @@
         line: 'WEBSSO_ENABLED = True'
       notify:
         - restart apache
-    - name: set horizon WEBSSO_ENABLED
+    - name: set horizon WEBSSO_CHOICES
       lineinfile:
         create: no
         dest: /opt/stack/horizon/openstack_dashboard/local/local_settings.py
