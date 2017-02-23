@@ -61,8 +61,6 @@
     - name: create federated domain
       os_keystone_domain: name=federated_domain
       register: domain
-    - name: create federated project
-      os_project: name=federated_project domain_id="{{ domain.id }}"
     - name: create federated group
       os_group: name=federated_users domain_id="{{ domain.id }}"
     - name: add federated users to federated domain
@@ -70,11 +68,6 @@
         group: 'federated_users'
         domain: "{{ domain.id }}"
         role: 'Member'
-    - name: add federated users to federated project
-      os_user_role:
-        group: federated_users
-        project: federated_project
-        role: Member
     - name: check existence of identity provider
       shell: openstack identity provider show myidp
       ignore_errors: True
