@@ -3,9 +3,13 @@
 set -eux
 
 implementation="${1}"
-if [ "$implementation" != "shibboleth" -a "$implementation" != "mellon" ] ; then
-  echo "Only shibboleth and mellon are supported."
+if [ "$implementation" != "shibboleth" -a "$implementation" != "mellon" -a "$implementation" != "oidc" ] ; then
+  echo "Only shibboleth, mellon, and oidc are supported."
   exit 1
+fi
+if [ "$implementation" == "oidc" ] ; then
+  : ${GOOGLE_OPENIDC_CLIENT_ID?"You must set GOOGLE_OPENIDC_CLIENT_ID when using the oidc implementation"}
+  : ${GOOGLE_OPENIDC_CLIENT_SECRET?"You must set GOOGLE_OPENIDC_CLIENT_SECRET when using the oidc implementation"}
 fi
 
 # TODO: remove when 2.3 is released

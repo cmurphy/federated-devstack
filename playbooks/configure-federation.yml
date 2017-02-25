@@ -7,17 +7,30 @@
     - local_entity_id: "https://mysp.example.com/{{ implementation }}/{{ uuid }}"
     - metadata_file_basename: "{{ local_entity_id|replace(':','_')|replace('/','_')|replace('-','_')|replace('___','_') }}"
   tasks:
+    - name: set hostname
+      become: yes
+      remote_user: root
+      hostname:
+        name: mysp
+    - name: set fqdn
+      become: yes
+      remote_user: root
+      lineinfile:
+        path: "/etc/hosts"
+        line: "{{ ansible_default_ipv4['address'] }}  mysp.example.com  mysp"
     - include: configure-shibboleth.yml
       when: implementation == "shibboleth"
     - include: configure-mellon.yml
       when: implementation == "mellon"
+    - include: configure-oidc.yml
+      when: implementation == "oidc"
     - name: set keystone trusted_dashboard
       ini_file:
         create: no
         dest: /etc/keystone/keystone.conf
         section: federation
         option: trusted_dashboard
-        value: "http://{{ ansible_default_ipv4['address'] }}/dashboard/auth/websso/"
+        value: "http://mysp.example.com/dashboard/auth/websso/"
       notify:
         - restart apache
     - name: turn on keystone insecure_debug
@@ -47,7 +60,15 @@
         create: no
         dest: /opt/stack/horizon/openstack_dashboard/local/local_settings.py
         regexp: '^#?WEBSSO_CHOICES ?= ?\(.*$'
-        line: 'WEBSSO_CHOICES = (("credentials", _("Keystone Credentials")), ("mapped", _("Security Assertion Markup Language")),)'
+        line: 'WEBSSO_CHOICES = (("credentials", _("Keystone Credentials")), ("mapped", _("External Authentication Service")),)'
+      notify:
+        - restart apache
+    - name: set horizon OPENSTACK_KEYSTONE_URL
+      lineinfile:
+        create: no
+        dest: /opt/stack/horizon/openstack_dashboard/local/local_settings.py
+        regexp: '^#?OPENSTACK_KEYSTONE_URL ?=.*$'
+        line: 'OPENSTACK_KEYSTONE_URL = "http://mysp.example.com/identity/v3"'
       notify:
         - restart apache
     # Refresh apache and shibd so that keystone and shibboleth are in working order before trying to use them
@@ -74,7 +95,9 @@
       changed_when: False
       register: check_idp
     - name: create identity provider
-      shell: openstack identity provider create --remote-id https://idp.testshib.org/idp/shibboleth myidp
+      vars:
+        remote_id: "{{ 'https://accounts.google.com' if implementation == 'oidc' else 'https://idp.testshib.org/idp/shibboleth' }}"
+      shell: "openstack identity provider create --remote-id {{ remote_id }}  myidp"
       when: check_idp|failed
     - name: define mapping rules
       template:
@@ -103,7 +126,7 @@
     # Register on testshib
     - name: download shibboleth metadata
       get_url:
-        url: "http://{{ ansible_default_ipv4['address'] }}/Shibboleth.sso/Metadata"
+        url: "http://mysp.example.com/Shibboleth.sso/Metadata"
         dest: "{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml"
       register: metadata_shibboleth
       when: implementation == "shibboleth"

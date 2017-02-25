@@ -15,10 +15,12 @@
         ],
         "remote": [
             {
-                {% if implementation == 'shibboleth' %}
-                "type": "REMOTE_USER"
-                {% else %}
+                {% if implementation == 'oidc' %}
+                "type": "HTTP_OIDC_EMAIL"
+                {% elif implementation == 'mellon' %}
                 "type": "MELLON_urn:oid:1.3.6.1.4.1.5923.1.1.1.6"
+                {% else %}
+                "type": "REMOTE_USER"
                 {% endif %}
             }
         ]

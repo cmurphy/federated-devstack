@@ -1,0 +1,53 @@
+---
+# Configure OIDC
+- name: install oidc
+  become: yes
+  remote_user: root
+  apt: name=libapache2-mod-auth-openidc
+- name: enable openidc mod
+  become: yes
+  remote_user: root
+  apache2_module:
+    name: auth_openidc
+  notify: restart apache
+# Configure Keystone
+- name: configure keystone vhost
+  become: yes
+  remote_user: root
+  blockinfile:
+    path: /etc/apache2/sites-available/keystone.conf
+    block: |
+      OIDCClaimPrefix "OIDC-"
+      OIDCResponseType "id_token"
+      OIDCScope "openid email profile"
+      OIDCProviderMetadataURL https://accounts.google.com/.well-known/openid-configuration
+      OIDCClientID "{{ ansible_env['GOOGLE_OPENIDC_CLIENT_ID'] }}"
+      OIDCClientSecret "{{ ansible_env['GOOGLE_OPENIDC_CLIENT_SECRET'] }}"
+      OIDCCryptoPassphrase openstack
+      OIDCRedirectURI http://mysp.example.com/identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth
+      OIDCRedirectURI http://mysp.example.com/identity/v3/auth/OS-FEDERATION/websso
+      OIDCRedirectURI http://mysp.example.com/identity/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/mapped/websso
+      <LocationMatch /identity/v3/OS-FEDERATION/identity_providers/.*?/protocols/mapped/auth>
+        AuthType openid-connect
+        Require valid-user
+        LogLevel debug
+      </LocationMatch>
+      <Location ~ "/identity/v3/auth/OS-FEDERATION/websso/mapped">
+        AuthType openid-connect
+        Require valid-user
+      </Location>
+      <Location ~ "/identity/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/mapped/websso">
+        AuthType openid-connect
+        Require valid-user
+      </Location>
+  notify:
+    - restart apache
+- name: set keystone remote_id_attribute
+  ini_file:
+    create: no
+    dest: /etc/keystone/keystone.conf
+    section: federation
+    option: remote_id_attribute
+    value: HTTP_OIDC_ISS
+  notify:
+    - restart apache
