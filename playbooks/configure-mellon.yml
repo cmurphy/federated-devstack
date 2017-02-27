@@ -16,7 +16,7 @@
     path: /etc/apache2/mellon
     state: directory
 - name: generate mellon metadata
-  shell: "{{ ansible_env['HOME'] }}/mellon_create_metadata.sh {{ local_entity_id }} http://{{ ansible_default_ipv4['address'] }}/identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth/mellon"
+  shell: "{{ ansible_env['HOME'] }}/mellon_create_metadata.sh {{ local_entity_id }} http://mysp.example.com/identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth/mellon"
   args:
     chdir: "{{ ansible_env['HOME'] }}"
     creates: "{{ ansible_env['HOME'] }}/{{ metadata_file_basename }}.xml"
