@@ -32,7 +32,7 @@
         option: trusted_dashboard
         value: "http://mysp.example.com/dashboard/auth/websso/"
       notify:
-        - restart apache
+        - restart uwsgi
     - name: turn on keystone insecure_debug
       ini_file:
         create: no
@@ -41,7 +41,7 @@
         option: insecure_debug
         value: true
       notify:
-        - restart apache
+        - restart uwsgi
     - name: copy redirect template
       copy:
         src: /opt/stack/keystone/etc/sso_callback_template.html
@@ -151,3 +151,6 @@
       become: yes
       remote_user: root
       service: name=apache2 state=restarted
+    - name: restart uwsgi
+      # HUP doesn't do what you'd think, you have to restart the process
+      shell: "kill -HUP `cat /opt/stack/status/stack/key-p.pid` && sleep 3 && screen -S stack -p key-p -X stuff  \"/usr/local/bin/uwsgi --ini /etc/keystone/keystone-uwsgi-public.ini & echo \\$! >/opt/stack/status/stack/key-p.pid; fg || echo \\\"key-p failed to start. Exit code: \\$?\\\" | tee \\\"/opt/stack/status/stack/key-p.failure\\\"`echo -ne '\\015'`\""

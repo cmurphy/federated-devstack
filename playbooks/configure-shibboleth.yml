@@ -29,8 +29,12 @@
   become: yes
   remote_user: root
   blockinfile:
-    path: /etc/apache2/sites-available/keystone.conf
+    path: /etc/apache2/sites-available/keystone-wsgi-public.conf
+    # Initial content:
+    # ProxyPass "/identity" "unix:/tmp/keystone-wsgi-public.socket|uwsgi://uwsgi-uds-keystone-wsgi-public/" retry=0
+    # Block is appended after
     block: |
+      ProxyPass /Shibboleth.sso !
       <Location ~ "/identity/v3/auth/OS-FEDERATION/websso/mapped">
           AuthType shibboleth
           Require valid-user
@@ -51,7 +55,6 @@
           AuthType shibboleth
           Require valid-user
       </Location>
-      WSGIScriptAliasMatch ^(/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /usr/local/bin/keystone-wsgi-public/
   notify:
     - restart apache
 - name: set keystone remote_id_attribute
@@ -62,4 +65,4 @@
     option: remote_id_attribute
     value: Shib-Identity-Provider
   notify:
-    - restart apache
+    - restart uwsgi
