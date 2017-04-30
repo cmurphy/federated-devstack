@@ -48,7 +48,7 @@
   become: yes
   remote_user: root
   blockinfile:
-    path: /etc/apache2/sites-available/keystone.conf
+    path: /etc/apache2/sites-available/keystone-wsgi-public.conf
     block: |
       <Location /identity/v3>
           MellonEnable "info"
@@ -63,18 +63,18 @@
       <Location /identity/v3/OS-FEDERATION/identity_providers/myidp/protocols/mapped/auth>
           AuthType "Mellon"
           MellonEnable "auth"
+          Require valid-user
       </Location>
       <Location ~ "/identity/v3/auth/OS-FEDERATION/websso/mapped">
-        AuthType Mellon
-        MellonEnable auth
-        Require valid-user
+          AuthType Mellon
+          MellonEnable auth
+          Require valid-user
       </Location>
       <Location ~ "/identity/v3/auth/OS-FEDERATION/identity_providers/myidp/protocols/mapped/websso">
-        AuthType Mellon
-        MellonEnable auth
-        Require valid-user
+          AuthType Mellon
+          MellonEnable auth
+          Require valid-user
       </Location>
-      WSGIScriptAliasMatch ^(/identity/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /usr/local/bin/keystone-wsgi-public/
   notify:
     - restart apache
 - name: set keystone remote_id_attribute
@@ -86,3 +86,4 @@
     value: MELLON_IDP
   notify:
     - restart apache
+    - restart uwsgi
