@@ -15,7 +15,7 @@
   become: yes
   remote_user: root
   blockinfile:
-    path: /etc/apache2/sites-available/keystone.conf
+    path: /etc/apache2/sites-available/keystone-wsgi-public.conf
     block: |
       OIDCClaimPrefix "OIDC-"
       OIDCResponseType "id_token"
@@ -50,4 +50,4 @@
     option: remote_id_attribute
     value: HTTP_OIDC_ISS
   notify:
-    - restart apache
+    - restart uwsgi
