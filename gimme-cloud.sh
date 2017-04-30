@@ -12,15 +12,7 @@ if [ "$implementation" == "oidc" ] ; then
   : ${GOOGLE_OPENIDC_CLIENT_SECRET?"You must set GOOGLE_OPENIDC_CLIENT_SECRET when using the oidc implementation"}
 fi
 
-# TODO: remove when 2.3 is released
-if [ -d $HOME/ansible ] ; then
-  pushd $HOME/ansible
-  git pull
-  popd
-else
-  git clone https://github.com/ansible/ansible $HOME/ansible
-fi
-sudo pip install $HOME/ansible
+sudo pip install ansible
 
 ansible-playbook -vvvv -i "localhost," -c local playbooks/install-devstack.yml
 source $HOME/devstack/accrc/admin/admin
