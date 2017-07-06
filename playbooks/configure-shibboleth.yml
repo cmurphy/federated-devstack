@@ -65,4 +65,4 @@
     option: remote_id_attribute
     value: Shib-Identity-Provider
   notify:
-    - restart uwsgi
+    - restart keystone

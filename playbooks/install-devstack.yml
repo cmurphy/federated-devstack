@@ -18,10 +18,12 @@
         dest: "{{ devstack_path }}/local.conf"
         line: "ENABLED_SERVICES=mysql,rabbit,key,horizon,n-api"
     - name: check devstack
-      shell: "screen -ls | grep 'There is a screen on'"
-      register: screen_exists
+      become: yes
+      remote_user: root
+      shell: "systemctl status devstack@keystone.service"
+      register: devstack_started
       ignore_errors: True
       changed_when: False
     - name: run devstack
       command: "{{ ansible_env['HOME'] }}/devstack/stack.sh"
-      when: screen_exists|failed
+      when: devstack_started|failed

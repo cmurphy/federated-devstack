@@ -86,4 +86,4 @@
     value: MELLON_IDP
   notify:
     - restart apache
-    - restart uwsgi
+    - restart keystone

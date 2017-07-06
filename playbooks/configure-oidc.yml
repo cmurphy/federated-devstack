@@ -50,4 +50,4 @@
     option: remote_id_attribute
     value: HTTP_OIDC_ISS
   notify:
-    - restart uwsgi
+    - restart keystone

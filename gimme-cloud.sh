@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eux
+set -ex
 
 implementation="${1}"
 if [ "$implementation" != "shibboleth" -a "$implementation" != "mellon" -a "$implementation" != "oidc" ] ; then
@@ -15,7 +15,7 @@ fi
 sudo pip install ansible
 
 ansible-playbook -vvvv -i "localhost," -c local playbooks/install-devstack.yml
-source $HOME/devstack/accrc/admin/admin
+source $HOME/devstack/openrc admin admin
 export OS_IDENTITY_API_VERSION=3
 ansible-playbook -vvvv -i "localhost," -c local \
                  --extra-vars "implementation=$implementation" \
