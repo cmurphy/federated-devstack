@@ -7,6 +7,10 @@
     - local_entity_id: "https://mysp.example.com/{{ implementation }}/{{ uuid }}"
     - metadata_file_basename: "{{ local_entity_id|replace(':','_')|replace('/','_')|replace('-','_')|replace('___','_') }}"
   tasks:
+    - name: install dbus
+      become: yes
+      remote_user: root
+      apt: name=dbus
     - name: set hostname
       become: yes
       remote_user: root
