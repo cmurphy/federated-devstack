@@ -16,7 +16,7 @@
       lineinfile:
         create: no
         dest: "{{ devstack_path }}/local.conf"
-        line: "ENABLED_SERVICES=mysql,rabbit,key,horizon"
+        line: "ENABLED_SERVICES=mysql,key,horizon"
     - name: check devstack
       become: yes
       remote_user: root
