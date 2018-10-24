@@ -4,6 +4,11 @@
   vars:
     - devstack_path: "{{ ansible_env['HOME'] }}/devstack"
   tasks:
+    # netbase needed for eventlet
+    - name: install netbase
+      become: yes
+      remote_user: root
+      apt: name=netbase
     - name: download devstack
       git:
         repo: git://git.openstack.org/openstack-dev/devstack
