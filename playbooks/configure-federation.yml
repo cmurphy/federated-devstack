@@ -100,7 +100,7 @@
       register: check_idp
     - name: create identity provider
       vars:
-        remote_id: "{{ 'https://accounts.google.com' if implementation == 'oidc' else 'https://idp.testshib.org/idp/shibboleth' }}"
+        remote_id: "{{ 'https://accounts.google.com' if implementation == 'oidc' else 'https://samltest.id/saml/idp' }}"
       shell: "openstack identity provider create --remote-id {{ remote_id }}  myidp"
       when: check_idp|failed
     - name: define mapping rules
@@ -127,7 +127,7 @@
     - name: create federation protocol
       shell: openstack federation protocol create mapped --mapping myidp_mapping --identity-provider myidp
       when: check_protocol|failed
-    # Register on testshib
+    # Register on samltest.id
     - name: download shibboleth metadata
       get_url:
         url: "http://mysp.example.com/Shibboleth.sso/Metadata"
@@ -140,9 +140,9 @@
         dest: "{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml"
       register: metadata_mellon
       when: implementation == "mellon"
-    - name: register on testshib
+    - name: register on samltest.id
       # The URI module doesn't have an equivalent of -F to post files
-      shell: "curl -X POST -F \"userfile=@{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml\" https://www.testshib.org/procupload.php"
+      shell: "curl -X POST -F \"userfile=@{{ ansible_env['HOME'] }}/mysp.example.com.{{ uuid }}.xml\" -F \"submit=OK\" https://samltest.id/upload.php"
       args:
         warn: no
       when: metadata_shibboleth['changed'] or metadata_mellon['changed']

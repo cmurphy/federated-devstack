@@ -21,7 +21,7 @@
 
     <!-- The ApplicationDefaults element is where most of Shibboleth's SAML bits are defined. -->
     <ApplicationDefaults entityID="{{local_entity_id}}"
-                         REMOTE_USER="eppn persistent-id targeted-id">
+                         REMOTE_USER="uid eppn persistent-id targeted-id">
 
         <!--
         Controls session lifetimes, address checks, cookie handling, and the protocol handlers.
@@ -41,7 +41,7 @@
             (Set discoveryProtocol to "WAYF" for legacy Shibboleth WAYF support.)
             You can also override entityID on /Login query string, or in RequestMap/htaccess.
             -->
-            <SSO ECP="true" entityID="https://idp.testshib.org/idp/shibboleth">
+            <SSO ECP="true" entityID="https://samltest.id/saml/idp">
               SAML2 SAML1
             </SSO>
 
@@ -77,7 +77,7 @@
             <MetadataFilter type="Signature" certificate="fedsigner.pem"/>
         </MetadataProvider>
         -->
-        <MetadataProvider type="XML" uri="http://www.testshib.org/metadata/testshib-providers.xml" />
+        <MetadataProvider type="XML" uri="https://samltest.id/saml/idp" />
 
         <!-- Example of locally maintained metadata. -->
         <!--
