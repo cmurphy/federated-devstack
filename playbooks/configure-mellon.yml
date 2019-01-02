@@ -20,13 +20,6 @@
   args:
     chdir: "{{ ansible_env['HOME'] }}"
     creates: "{{ ansible_env['HOME'] }}/{{ metadata_file_basename }}.xml"
-- name: fix SP metadata
-  lineinfile:
-    create: no
-    dest: "{{ ansible_env['HOME'] }}/{{ metadata_file_basename }}.xml"
-    backrefs: yes
-    regexp: '(^\s*<KeyDescriptor use=\")(.*)(\">$)'
-    line: '\1encryption\3'
 - name: install mellon metadata
   become: yes
   remote_user: root
@@ -37,11 +30,11 @@
   copy:
     src: "{{ ansible_env['HOME'] }}/{{ metadata_file_basename }}.{{ item }}"
     dest: "/etc/apache2/mellon/{{ metadata_file_basename }}.{{ item }}"
-- name: Get testshib IdP metadata
+- name: Get samltest IdP metadata
   become: yes
   remote_user: root
   get_url:
-    url: http://www.testshib.org/metadata/testshib-providers.xml
+    url: https://samltest.id/saml/idp
     dest: /etc/apache2/mellon/idp-metadata.xml
 # Configure Keystone
 - name: configure keystone vhost
