@@ -11,7 +11,7 @@
       apt: name=netbase
     - name: download devstack
       git:
-        repo: git://git.openstack.org/openstack-dev/devstack
+        repo: https://opendev.org/openstack/devstack
         dest: "{{ devstack_path }}"
     - name: copy local.conf
       copy:
